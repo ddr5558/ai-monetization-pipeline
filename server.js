@@ -1,5 +1,5 @@
-const OpenAI = require("openai");
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const Anthropic = require("@anthropic-ai/sdk");
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const express = require("express");
 
@@ -19,17 +19,17 @@ app.post("/webhook", async (req, res) => {
     return res.status(400).json({ error: "message 필드가 필요합니다." });
   }
 
-  const response = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 1024,
+    system: "당신은 친절한 재테크 전문 상담 챗봇입니다. 질문에 맞게 도움이 되는 답변을 해주세요.",
     messages: [
-      { role: "system", content: "당신은 친절한 재테크 전문 상담 챗봇입니다. 질문에 맞게 도움이 되는 답변을 해주세요."
- },  // ← 챗봇 역할을 직접 써보세요
       { role: "user", content: message
-       }              // ← 사용자 메시지를 넣어보세요
+ },      
     ],
   });
 
-  const reply = response.choices[0].message.content;  // ← blogGenerator.js 39번 줄을 참고하세요
+  const reply = response.content[0].text;  // ← blogGenerator.js 39번 줄을 참고하세요
 
   res.json({ reply });
 });

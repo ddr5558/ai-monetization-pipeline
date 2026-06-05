@@ -1,6 +1,6 @@
-const OpenAI = require("openai");
+const Anthropic = require("@anthropic-ai/sdk");
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const topics = [
   {
@@ -30,12 +30,13 @@ async function generateBlogPost(topic) {
 마크다운 형식으로 작성해주세요.
   `.trim();
 
-  const response = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+  const response = await client.messages.create({
+    model: "claude-3-5-sonnet-20241022",
+    max_tokens: 1024,
     messages: [{ role: "user", content: prompt }],
   });
 
-  return response.choices[0].message.content;
+  return response.content[0].text;
 }
 
 function generateImagePrompt(topic) {
