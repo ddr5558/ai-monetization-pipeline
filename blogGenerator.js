@@ -63,6 +63,8 @@ async function generateBlogPost(topic) {
 - 소제목 아래는 번호 없이 자연스러운 2~3문장 문단으로 작성
 - 신문 기사처럼 사실을 서술하되, 인과관계와 흐름이 느껴지도록 작성
 - 문단과 문단 사이 한 줄 공백으로 가독성 확보
+- 글 본문 작성 후 맨 마지막에 "META:" 로 시작하는 줄에 검색 최적화된 메타 설명 (150자 이내)을 작성할 것
+
 
   `.trim();
 
@@ -133,19 +135,25 @@ async function main() {
     console.log("=".repeat(50));
 
     const post = await generateBlogPost(topic);
-    const cleanTitle = post.split('\n')[0].replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
-    const postLines = post.split('\n');
+    const metaMatch = post.match(/META:\s*(.+)/);
+    const metaDescription = metaMatch ? metaMatch[1].trim() : '';
+    const cleanPost = post.replace(/META:\s*.+/, '').trim();
+    const cleanTitle = cleanPost.split('\n')[0].replace(/^#+\s*/, '').replace(/\*\*/g, '').trim(); // 141
+    const postLines = cleanPost.split('\n');
     postLines[0] = `<!-- wp:heading {"level":3} --><h3>${cleanTitle}</h3><!-- /wp:heading -->`;
     const processedPost = postLines.join('\n');
     const postWithImages = await insertImages(processedPost, topic.keyword);
     console.log(postWithImages);
 
     const koreanTitle = cleanTitle + ` [${today}]`;
-    await postToWordPress(koreanTitle, postWithImages);
+
+    // 워드프레스에 발행 (티스토리는 로컬 tistoryMirror.js가 미러링)
+    await postToWordPress(koreanTitle, postWithImages, metaDescription);
     console.log("워드프레스 업로드 완료!");
   }
 }
-async function postToWordPress(title, content) {
+
+async function postToWordPress(title, content, metaDescription) {
   return new Promise((resolve, reject) => {
     const client = xmlrpc.createSecureClient({
       host: "cheetahfather.wordpress.com",
@@ -157,6 +165,7 @@ async function postToWordPress(title, content) {
       post_title: title,
       post_content: content,
       post_status: "publish",
+      post_excerpt: metaDescription,           
     };
 
     client.methodCall(

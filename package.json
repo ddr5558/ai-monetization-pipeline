@@ -14,6 +14,7 @@
     "@anthropic-ai/sdk": "^0.100.1",
     "axios": "^1.17.0",
     "express": "^5.2.1",
+    "puppeteer-core": "^25.1.0",
     "xmlrpc": "^1.3.2"
   }
 }

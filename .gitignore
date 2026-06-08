@@ -1,3 +1,9 @@
 node_modules/
 .env
 .env.local
+
+# 티스토리 로그인 세션/쿠키 — 절대 커밋 금지 (계정 유출 위험)
+whale-profile/
+
+# 미러링 상태(로컬 전용)
+mirrored.json
