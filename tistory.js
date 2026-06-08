@@ -129,19 +129,29 @@ async function postToTistory(title, content) {
       ),
     ].slice(0, 10);
     if (tags.length > 0) {
-      await page.click("#tagText");
-      for (const tag of tags) {
-        await page.type("#tagText", tag);
-        await page.keyboard.press("Enter");
-        await new Promise((r) => setTimeout(r, 250));
+      // 태그는 부가 요소 → 실패해도 발행은 계속되도록 try/catch.
+      // click 대신 focus를 써서 레이아웃 가림에 영향받지 않게 한다.
+      try {
+        await page.focus("#tagText");
+        for (const tag of tags) {
+          await page.type("#tagText", tag);
+          await page.keyboard.press("Enter"); // 각 태그를 칩으로 등록
+          await new Promise((r) => setTimeout(r, 250));
+        }
+      } catch (e) {
+        console.log("태그 입력 건너뜀:", e.message);
       }
     }
 
+    // 태그 추천 드롭다운 등이 떠 있으면 닫기 (발행 버튼 가림 방지)
+    await page.keyboard.press("Escape").catch(() => {});
+
     // 발행: 완료 → 공개 선택 → 발행
-    await page.click("#publish-layer-btn");
+    // page.click 대신 JS 클릭을 써서 오버레이에 가려져도 동작하게 한다.
+    await page.evaluate(() => document.querySelector("#publish-layer-btn").click());
     await page.waitForSelector("#open20", { visible: true });
-    await page.click("#open20");
-    await page.click("#publish-btn");
+    await page.evaluate(() => document.querySelector("#open20").click());
+    await page.evaluate(() => document.querySelector("#publish-btn").click());
     await page.waitForNavigation({ waitUntil: "domcontentloaded" }).catch(() => {});
 
     console.log("티스토리 발행 완료!");
