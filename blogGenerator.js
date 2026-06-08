@@ -91,14 +91,16 @@ async function generateBlogPost(topic) {
 
 async function searchImage(keyword, page = 1) {
   // 이미지는 부가 요소 → 실패해도 글 발행은 계속되도록 null 반환
+  // 시크릿 이름이 PEXELS/PIXELS 어느 쪽이든 인식 (오타 호환)
+  const pexelsKey = process.env.PEXELS_API_KEY || process.env.PIXELS_API_KEY;
   try {
-    if (!process.env.PEXELS_API_KEY) {
-      console.log("PEXELS_API_KEY 없음 - 이미지 건너뜀");
+    if (!pexelsKey) {
+      console.log("Pexels 키 없음 - 이미지 건너뜀");
       return null;
     }
     const response = await axios.get("https://api.pexels.com/v1/search", {
       headers: {
-        Authorization: process.env.PEXELS_API_KEY,
+        Authorization: pexelsKey,
       },
       params: {
         query: keyword,
