@@ -69,6 +69,20 @@ async function ensureWhaleRunning() {
   throw new Error("Whale(9222) 자동 실행 실패");
 }
 
+// 제목을 max자(띄어쓰기 포함) 이내로 축약. 길면 단어 경계에서 자르고 '…' 추가.
+function shortenTitle(title, max = 40) {
+  const t = title.trim();
+  if (t.length <= max) return t;
+  // 끝의 날짜 꼬리표 [2026년 6월 8일] 같은 건 우선 제거 후 다시 판단
+  const withoutDate = t.replace(/\s*\[[^\]]*\]\s*$/, "").trim();
+  if (withoutDate.length <= max) return withoutDate;
+  // '…' 한 글자 자리를 남기고 자르되, 가능하면 마지막 공백에서 끊는다
+  let cut = withoutDate.slice(0, max - 1);
+  const lastSpace = cut.lastIndexOf(" ");
+  if (lastSpace > max * 0.6) cut = cut.slice(0, lastSpace);
+  return cut.trim() + "…";
+}
+
 // 제목/본문을 티스토리에 공개 발행
 async function postToTistory(title, content) {
   // PC가 켜져 있으면 Whale(9222)을 알아서 띄운다 (없을 때만).
@@ -102,9 +116,9 @@ async function postToTistory(title, content) {
     // 워드프레스 전용 블록 주석(<!-- wp:... -->) 제거 → 순수 HTML
     const cleanContent = content.replace(/<!--[\s\S]*?-->/g, "");
 
-    // 제목 입력
+    // 제목 입력 (티스토리에서 잘리지 않게 40자 이내로 축약)
     await page.click("#post-title-inp");
-    await page.type("#post-title-inp", title);
+    await page.type("#post-title-inp", shortenTitle(title, 40));
 
     // 본문 입력 (TinyMCE API)
     // setContent만 하면 화면엔 보이지만 숨은 textarea에 동기화가 안 돼
