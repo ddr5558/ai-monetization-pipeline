@@ -117,6 +117,26 @@ async function postToTistory(title, content) {
     }, cleanContent);
     await new Promise((r) => setTimeout(r, 1000)); // 동기화 안정화
 
+    // 본문에서 해시태그 추출 → 티스토리 태그칸(#tagText)에 입력
+    // (중복 제거 후 최대 10개, 각 태그 입력 후 Enter)
+    // (?<!&) → &#8230; 같은 HTML 숫자 엔티티를 태그로 오인하지 않게 제외
+    // 추가로 순수 숫자 태그도 거른다.
+    const tags = [
+      ...new Set(
+        (cleanContent.match(/(?<!&)#[가-힣A-Za-z0-9_]+/g) || [])
+          .map((t) => t.slice(1))
+          .filter((t) => !/^\d+$/.test(t))
+      ),
+    ].slice(0, 10);
+    if (tags.length > 0) {
+      await page.click("#tagText");
+      for (const tag of tags) {
+        await page.type("#tagText", tag);
+        await page.keyboard.press("Enter");
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    }
+
     // 발행: 완료 → 공개 선택 → 발행
     await page.click("#publish-layer-btn");
     await page.waitForSelector("#open20", { visible: true });

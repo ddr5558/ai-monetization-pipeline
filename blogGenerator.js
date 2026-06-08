@@ -18,35 +18,47 @@ const today = new Date().toLocaleDateString("ko-KR", {
 
 
 async function getTrendingTopics() {
- const response = await axios.get("https://newsapi.org/v2/top-headlines", {
-  params: {
-    country: "us",
-    pageSize: 10,
-    apiKey: NEWS_API_KEY,
-  },
-});
+  const response = await axios.get("https://newsapi.org/v2/top-headlines", {
+    params: {
+      country: "us",
+      category: "business", // 경제·재테크 중심 뉴스
+      pageSize: 20,
+      apiKey: NEWS_API_KEY,
+    },
+  });
 
+  // 정치 기사 제외
+  const candidates = response.data.articles.filter(
+    (article) =>
+      article.title &&
+      !/정치|대통령|국회|선거|여당|야당|trump|election|politic/i.test(article.title)
+  );
+  if (candidates.length === 0) {
+    throw new Error("적합한 경제 뉴스를 찾지 못했습니다.");
+  }
 
-const articles = response.data.articles
-  // 수정
-.filter((article) => !article.title.match(/정치|대통령|국회|선거|여당|야당/))
-    .slice(0, 1);
+  // 매번 다른 주제가 나오도록 무작위 선택 → 이전 글과 동일 주제 반복 방지
+  const article = candidates[Math.floor(Math.random() * candidates.length)];
+  const keyword = article.title.replace(/ - [^-]+$/, "");
 
-  return articles.map((article) => ({
-    title: `오늘의 메인 이슈 : ${article.title.replace(/ - [^-]+$/, "")} [${today}]`,  // 뉴스 제목에 날짜 추가
-    keyword: article.title.replace(/ - [^-]+$/, ""),           // 뉴스 제목에서 날짜 제거 후 키워드로 활용
-  }));
+  return [
+    {
+      title: `오늘의 경제·재테크 이슈 : ${keyword} [${today}]`,
+      keyword,
+    },
+  ];
 }
 
 
 async function generateBlogPost(topic) {
   const prompt = `
-당신은 10년 경력의 뉴스 블로그 기자입니다. 아래 주제로 기사를 작성해주세요.
+당신은 10년 경력의 경제·재테크 전문 블로그 기자입니다. 아래 주제로 경제/재테크 독자를 위한 기사를 작성해주세요.
 
 주제: ${topic.title}
 핵심 키워드: ${topic.keyword}
 
 작성 조건:
+- 경제·재테크 관점에서 작성하고, 단순 뉴스 전달에 그치지 말고 일반 독자의 투자·자산관리 관점에서 의미와 시사점을 녹여낼 것
 - AI가 쓴 티가 나지 않는 자연스러운 한국어 문체
 - 실제 기자가 쓴 것처럼 사실 중심, 간결하고 명확하게
 - "~할 수 있습니다", "~하는 것이 중요합니다" 같은 AI 특유의 표현 금지
@@ -78,18 +90,28 @@ async function generateBlogPost(topic) {
 }
 
 async function searchImage(keyword, page = 1) {
-  const response = await axios.get("https://api.pexels.com/v1/search", {
-    headers: {
-      Authorization: process.env.PEXELS_API_KEY,
-    },
-    params: {
-      query: keyword,
-      per_page: 10,        // 1 → 10으로 변경
-    },
-  });
-  const photos = response.data.photos;
-  const index = (page - 1) % (photos?.length || 1);  // 인덱스로 선택
-  return photos?.[index]?.src?.large || null;
+  // 이미지는 부가 요소 → 실패해도 글 발행은 계속되도록 null 반환
+  try {
+    if (!process.env.PEXELS_API_KEY) {
+      console.log("PEXELS_API_KEY 없음 - 이미지 건너뜀");
+      return null;
+    }
+    const response = await axios.get("https://api.pexels.com/v1/search", {
+      headers: {
+        Authorization: process.env.PEXELS_API_KEY,
+      },
+      params: {
+        query: keyword,
+        per_page: 10,
+      },
+    });
+    const photos = response.data.photos;
+    const index = (page - 1) % (photos?.length || 1);
+    return photos?.[index]?.src?.large || null;
+  } catch (e) {
+    console.log("이미지 검색 실패(건너뜀):", e.message);
+    return null;
+  }
 }
 
 async function insertImages(content, englishKeyword) {
@@ -178,4 +200,7 @@ async function postToWordPress(title, content, metaDescription) {
     );
   });
 }
-main().catch(console.error);
+main().catch((e) => {
+  console.error(e);
+  process.exitCode = 1; // 실패 시 워크플로가 빨간 X로 표시되도록 (조용한 실패 방지)
+});
