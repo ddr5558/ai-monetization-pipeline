@@ -69,18 +69,33 @@ async function ensureWhaleRunning() {
   throw new Error("Whale(9222) 자동 실행 실패");
 }
 
-// 제목을 max자(띄어쓰기 포함) 이내로 축약. 날짜 꼬리표는 항상 제거하고
-// 제목 글자를 최대한 살린다. 잘릴 경우에만 '…'을 붙인다.
+// 제목을 max자(띄어쓰기 포함) 이내로 축약.
+// 날짜 꼬리표는 제거하고, 자연스러운 절(節) 경계(쉼표·말줄임표 등)에서 끊어
+// '완성된 구문'이 되도록 한다. 절 경계가 없을 때만 최후 수단으로 '…'을 붙인다.
 function shortenTitle(title, max = 40) {
   // 끝의 날짜 꼬리표 [2026년 6월 8일] 같은 건 항상 제거 (티스토리엔 날짜 미표시)
-  const t = title.replace(/\s*\[[^\]]*\]\s*$/, "").trim();
+  const t = title.replace(/\.\.\./g, "…").replace(/\s*\[[^\]]*\]\s*$/, "").trim();
   if (t.length <= max) return t;
-  // '…' 한 글자 자리를 남기고 자른다
+
+  // 절 구분자(… , — · : ; ·) 뒤에서 절 단위로 분리하고, 40자 안에 들어가는
+  // 완성된 절들을 최대한 채운다. (공백은 보존)
+  const parts = t.split(/(?<=[…,—·:;])/);
+  let result = "";
+  for (const part of parts) {
+    if (part.trim() && (result + part).trim().length <= max) {
+      result += part;
+    } else {
+      break;
+    }
+  }
+  // 끝에 남은 구분자/공백 제거 → 완성된 구문
+  result = result.replace(/[\s,·—:;…]+$/, "").trim();
+  if (result) return result;
+
+  // 절 경계가 전혀 없거나 첫 절이 너무 길면: 단어 경계로 자르고 '…'(최후 수단)
   let cut = t.slice(0, max - 1);
-  // 거의 끝부분(마지막 ~5자 이내)에 공백이 있으면 거기서 깔끔히 끊고,
-  // 아니면 글자를 최대한 살리기 위해 그대로 자른다.
   const lastSpace = cut.lastIndexOf(" ");
-  if (lastSpace >= max - 6) cut = cut.slice(0, lastSpace);
+  if (lastSpace >= max - 10) cut = cut.slice(0, lastSpace);
   return cut.trim() + "…";
 }
 
