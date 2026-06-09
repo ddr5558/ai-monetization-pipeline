@@ -90,6 +90,9 @@ async function generateBlogPost(topic) {
 - 소제목 아래는 번호 없는 문단, 문단 사이 한 줄 공백으로 가독성 확보
 - 전체 길이 1800자 ~ 2600자 (깊이를 위해 충분히)
 - 뉴스 제목이 영어면 한국어로 자연스럽게 번역해 제목에 반영
+- "—", "---", "***" 같은 구분선을 단독 줄로 넣지 말 것
+- 해시태그 줄에는 해시태그만 작성하고, 앞에 키워드나 다른 단어를 붙이지 말 것
+- 글의 맨 끝은 (면책 문구) → (해시태그 줄) → (META 줄) 순서로만 끝낼 것. 그 외 군더더기 줄 금지
   `.trim();
 
   const response = await client.messages.create({
@@ -173,7 +176,15 @@ async function main() {
     const post = await generateBlogPost(topic);
     const metaMatch = post.match(/META:\s*(.+)/);
     const metaDescription = metaMatch ? metaMatch[1].trim() : '';
-    const cleanPost = post.replace(/META:\s*.+/, '').trim();
+    let cleanPost = post.replace(/META:\s*.+/, '').trim();
+    // 끝부분 정리: (1) 단독 구분선(—, ---, *** 등) 줄 제거,
+    // (2) 해시태그 줄 앞에 붙은 잡단어(키워드 등) 제거 → 외톨이 단어 방지,
+    // (3) 과도한 빈 줄 축소
+    cleanPost = cleanPost
+      .replace(/^\s*(?:[—–]|[-=*_~]{2,})\s*$/gm, '')
+      .replace(/^[^\n#]*?(#[가-힣A-Za-z0-9_]+(?:\s+#[가-힣A-Za-z0-9_]+)+.*)$/gm, '$1')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
     const cleanTitle = cleanPost.split('\n')[0].replace(/^#+\s*/, '').replace(/\*\*/g, '').trim(); // 141
     const postLines = cleanPost.split('\n');
     postLines[0] = `<!-- wp:heading {"level":3} --><h3>${cleanTitle}</h3><!-- /wp:heading -->`;
