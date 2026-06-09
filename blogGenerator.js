@@ -132,7 +132,9 @@ async function searchImage(keyword, page = 1) {
 }
 
 async function insertImages(content, englishKeyword) {
-  content = content.replace(/^#+\s*/gm, '');
+  // 마크다운 헤더(# 제목)만 제거 — '#' 뒤에 공백이 있을 때만.
+  // 해시태그(#재테크)는 공백 없이 붙으므로 보존된다. (외톨이 단어 방지)
+  content = content.replace(/^#+\s+/gm, '');
   content = content.replace(/([^\n])((\d+)\. )/g, '$1\n\n$2');
   const lines = content.split('\n');
   const result = [];
