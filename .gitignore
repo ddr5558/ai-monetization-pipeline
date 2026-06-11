@@ -7,3 +7,6 @@ whale-profile/
 
 # 미러링 상태(로컬 전용)
 mirrored.json
+
+# 메일 알림 설정 (앱 비밀번호 포함 — 절대 커밋 금지)
+.alert-config.json

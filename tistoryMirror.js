@@ -4,6 +4,7 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const { postToTistory } = require("./tistory");
+const { sendAlert } = require("./alert");
 
 const WP_SITE = "cheetahfather.wordpress.com";
 const MIRRORED_FILE = path.resolve("./mirrored.json");
@@ -65,6 +66,8 @@ async function main() {
   }
 
   console.log(`미러링 대상 ${toMirror.length}개`);
+  let sessionExpired = false;
+  let skipped = 0;
   for (const p of toMirror) {
     try {
       console.log(`\n[티스토리 발행] ${p.post_title}`);
@@ -73,10 +76,23 @@ async function main() {
       saveMirrored(mirrored); // 한 건 성공할 때마다 즉시 기록 (중복 방지)
     } catch (e) {
       console.log("발행 건너뜀:", p.post_title, "-", e.message);
+      skipped++;
+      if (/세션 만료|로그인/.test(e.message)) sessionExpired = true;
       // 세션 만료/Whale 없음 등은 다음 실행에서 재시도되도록 기록하지 않음
     }
   }
   console.log("\n미러링 작업 종료.");
+
+  // 세션 만료로 발행을 건너뛰었으면 메일 알림
+  if (sessionExpired) {
+    await sendAlert(
+      "[티스토리 자동발행] 로그인 세션 만료 — 재로그인 필요",
+      `티스토리 로그인 세션이 만료되어 글 ${skipped}건 발행을 건너뛰었습니다.\n\n` +
+        `Whale(9222) 창에서 티스토리(카카오)에 다시 로그인해 주세요. ("로그인 상태 유지" 체크)\n` +
+        `로그인 후에는 다음 예약 실행 때 자동으로 밀린 글이 발행됩니다.\n\n` +
+        `발생 시각: ${new Date().toLocaleString("ko-KR")}`
+    );
+  }
 }
 
 main().catch((e) => {
