@@ -16,10 +16,12 @@ async function sendAlert(subject, text) {
     return;
   }
   try {
-    const transporter = nodemailer.createTransport({
-      service: cfg.service || "gmail",
-      auth: { user: cfg.user, pass: cfg.pass },
-    });
+    // host가 지정되면 직접 SMTP(네이버 등), 아니면 service 약칭(gmail 등)
+    const transportConfig = cfg.host
+      ? { host: cfg.host, port: cfg.port || 465, secure: cfg.secure !== false }
+      : { service: cfg.service || "gmail" };
+    transportConfig.auth = { user: cfg.user, pass: cfg.pass };
+    const transporter = nodemailer.createTransport(transportConfig);
     await transporter.sendMail({
       from: cfg.user,
       to: cfg.to || cfg.user,
