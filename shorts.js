@@ -5,8 +5,25 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-// 저장 폴더: 바탕화면\쇼츠대본
-const SHORTS_DIR = path.join(os.homedir(), "Desktop", "쇼츠대본");
+// 실제 바탕화면 경로 찾기 (OneDrive 리디렉션 대응)
+function getDesktop() {
+  const home = os.homedir();
+  const candidates = [];
+  if (process.env.OneDrive) {
+    candidates.push(path.join(process.env.OneDrive, "바탕 화면"));
+    candidates.push(path.join(process.env.OneDrive, "Desktop"));
+  }
+  candidates.push(path.join(home, "OneDrive", "바탕 화면"));
+  candidates.push(path.join(home, "OneDrive", "Desktop"));
+  candidates.push(path.join(home, "Desktop"));
+  for (const c of candidates) {
+    try { if (fs.existsSync(c)) return c; } catch {}
+  }
+  return path.join(home, "Desktop");
+}
+
+// 저장 폴더: 실제 바탕화면\쇼츠대본
+const SHORTS_DIR = path.join(getDesktop(), "쇼츠대본");
 
 // Anthropic 키: 로컬 설정 파일(.shorts-config.json) 또는 환경변수
 function getApiKey() {
