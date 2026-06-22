@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const { postToTistory } = require("./tistory");
 const { sendAlert } = require("./alert");
+const { generateShorts } = require("./shorts");
 
 const WP_SITE = "cheetahfather.wordpress.com";
 const MIRRORED_FILE = path.resolve("./mirrored.json");
@@ -33,6 +34,7 @@ async function getRecentPosts(num) {
     post_id: String(p.id),
     post_title: decodeEntities(p.title.rendered),
     post_content: p.content.rendered,
+    post_link: p.link,
   }));
 }
 
@@ -74,6 +76,13 @@ async function main() {
       await postToTistory(p.post_title, p.post_content);
       mirrored.push(p.post_id);
       saveMirrored(mirrored); // 한 건 성공할 때마다 즉시 기록 (중복 방지)
+      // 유튜브 쇼츠 대본 생성 → 바탕화면\쇼츠대본 폴더에 저장
+      await generateShorts({
+        id: p.post_id,
+        title: p.post_title,
+        contentHtml: p.post_content,
+        url: p.post_link,
+      });
     } catch (e) {
       console.log("발행 건너뜀:", p.post_title, "-", e.message);
       skipped++;
