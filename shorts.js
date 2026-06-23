@@ -40,6 +40,16 @@ function sanitize(name) {
   return name.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim().slice(0, 50) || "untitled";
 }
 
+// 해당 글(id)의 쇼츠 대본 파일이 이미 있는지 확인
+function shortsExists(id) {
+  try {
+    if (!fs.existsSync(SHORTS_DIR)) return false;
+    return fs.readdirSync(SHORTS_DIR).some((f) => f.startsWith(String(id) + "_"));
+  } catch {
+    return false;
+  }
+}
+
 // 쇼츠 대본 생성 + 저장. 실패해도 미러링은 계속되도록 throw 안 함.
 async function generateShorts({ id, title, contentHtml, url }) {
   const key = getApiKey();
@@ -84,11 +94,22 @@ ${articleText}
 <#태그1 #태그2 ...>`;
 
     const client = new Anthropic({ apiKey: key });
-    const res = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1500,
-      messages: [{ role: "user", content: prompt }],
-    });
+    // 일시적 API 오류에 대비해 2회 재시도
+    let res;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        res = await client.messages.create({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1500,
+          messages: [{ role: "user", content: prompt }],
+        });
+        break;
+      } catch (e) {
+        if (attempt === 2) throw e;
+        console.log(`쇼츠 API 재시도(${attempt}):`, e.message);
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
     const script = res.content[0].text.trim();
 
     if (!fs.existsSync(SHORTS_DIR)) fs.mkdirSync(SHORTS_DIR, { recursive: true });
@@ -100,4 +121,4 @@ ${articleText}
   }
 }
 
-module.exports = { generateShorts, SHORTS_DIR };
+module.exports = { generateShorts, shortsExists, SHORTS_DIR };

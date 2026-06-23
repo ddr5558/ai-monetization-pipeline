@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const { postToTistory } = require("./tistory");
 const { sendAlert } = require("./alert");
-const { generateShorts } = require("./shorts");
+const { generateShorts, shortsExists } = require("./shorts");
 
 const WP_SITE = "cheetahfather.wordpress.com";
 const MIRRORED_FILE = path.resolve("./mirrored.json");
@@ -62,34 +62,41 @@ async function main() {
     .slice(0, MAX_PER_RUN)
     .reverse();
 
-  if (toMirror.length === 0) {
-    console.log("미러링할 새 글이 없습니다.");
-    return;
-  }
-
-  console.log(`미러링 대상 ${toMirror.length}개`);
   let sessionExpired = false;
   let skipped = 0;
-  for (const p of toMirror) {
-    try {
-      console.log(`\n[티스토리 발행] ${p.post_title}`);
-      await postToTistory(p.post_title, p.post_content);
-      mirrored.push(p.post_id);
-      saveMirrored(mirrored); // 한 건 성공할 때마다 즉시 기록 (중복 방지)
-      // 유튜브 쇼츠 대본 생성 → 바탕화면\쇼츠대본 폴더에 저장
+  if (toMirror.length === 0) {
+    console.log("미러링할 새 글이 없습니다.");
+  } else {
+    console.log(`미러링 대상 ${toMirror.length}개`);
+    for (const p of toMirror) {
+      try {
+        console.log(`\n[티스토리 발행] ${p.post_title}`);
+        await postToTistory(p.post_title, p.post_content);
+        mirrored.push(p.post_id);
+        saveMirrored(mirrored); // 한 건 성공할 때마다 즉시 기록 (중복 방지)
+      } catch (e) {
+        console.log("발행 건너뜀:", p.post_title, "-", e.message);
+        skipped++;
+        if (/세션 만료|로그인/.test(e.message)) sessionExpired = true;
+        // 세션 만료/Whale 없음 등은 다음 실행에서 재시도되도록 기록하지 않음
+      }
+    }
+  }
+
+  // 쇼츠 대본 보완 단계 — 미러링된 글 중 대본이 없는 것을 생성한다.
+  // (방금 미러링한 글 + 이전에 일시 오류로 빠진 글까지 매번 재시도되어 누락 방지)
+  for (const p of posts) {
+    if (mirrored.includes(p.post_id) && !shortsExists(p.post_id)) {
+      console.log(`\n[쇼츠 대본] ${p.post_title}`);
       await generateShorts({
         id: p.post_id,
         title: p.post_title,
         contentHtml: p.post_content,
         url: p.post_link,
       });
-    } catch (e) {
-      console.log("발행 건너뜀:", p.post_title, "-", e.message);
-      skipped++;
-      if (/세션 만료|로그인/.test(e.message)) sessionExpired = true;
-      // 세션 만료/Whale 없음 등은 다음 실행에서 재시도되도록 기록하지 않음
     }
   }
+
   console.log("\n미러링 작업 종료.");
 
   // 세션 만료로 발행을 건너뛰었으면 메일 알림
