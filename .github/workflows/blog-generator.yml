@@ -1,10 +1,8 @@
 name: 블로그 자동 생성
 
 on:
-  schedule:
-   # 한국시간(KST=UTC+9) 09:00, 12:00, 15:00 → UTC 00:00, 03:00, 06:00
-   - cron: '0 0,3,6 * * *'
-  workflow_dispatch:   #
+  # 예약(cron) 제거 — 로컬 pipeline.bat이 트리거(dispatch)로 3회/일 실행하므로 중복 방지
+  workflow_dispatch:
 
 jobs:
   generate:
