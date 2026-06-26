@@ -7,8 +7,7 @@ const http = require("http");
 const path = require("path");
 const fs = require("fs");
 
-const WHALE_PATH =
-  "C:\\Program Files\\Naver\\Naver Whale\\Application\\4.37.378.12\\whale.exe";
+const { WHALE_PATH } = require("./whalePath"); // 자동 탐지 (업데이트 대응)
 const TISTORY_BLOG = "ddr5558.tistory.com";
 
 // 9222 디버깅 포트가 응답하는지 확인 (= Whale이 떠 있는지)

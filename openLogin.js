@@ -6,8 +6,7 @@ const path = require("path");
 const fs = require("fs");
 const puppeteer = require("puppeteer-core");
 
-const WHALE_PATH =
-  "C:\\Program Files\\Naver\\Naver Whale\\Application\\4.37.378.12\\whale.exe";
+const { WHALE_PATH } = require("./whalePath"); // 자동 탐지 (업데이트 대응)
 
 function portUp() {
   return new Promise((r) => {
