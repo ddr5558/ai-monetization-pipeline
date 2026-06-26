@@ -124,7 +124,11 @@ async function searchImage(keyword, page = 1) {
     });
     const photos = response.data.photos;
     const index = (page - 1) % (photos?.length || 1);
-    return photos?.[index]?.src?.large || null;
+    const url = photos?.[index]?.src?.large || null;
+    // Pexels CDN이 브라우저에 AVIF를 주는 것을 막고 JPG로 강제 (fm=jpg)
+    if (!url) return null;
+    const jpg = url.replace(/([?&])fm=[^&]*/g, "$1").replace(/[?&]+$/, "");
+    return jpg + (jpg.includes("?") ? "&" : "?") + "fm=jpg";
   } catch (e) {
     console.log("이미지 검색 실패(건너뜀):", e.message);
     return null;
