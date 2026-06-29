@@ -37,7 +37,7 @@ function getApiKey() {
 
 // 파일명에 못 쓰는 문자 제거
 function sanitize(name) {
-  return name.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim().slice(0, 50) || "untitled";
+  return name.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").slice(0, 50).trim() || "untitled";
 }
 
 // 해당 글(id)의 쇼츠 대본 파일이 이미 있는지 확인

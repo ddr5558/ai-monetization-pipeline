@@ -21,10 +21,10 @@ function getDesktop() {
   return path.join(home, "Desktop");
 }
 
-const BASE_DIR = path.join(getDesktop(), "네이버이미지");
+const BASE_DIR = path.join(getDesktop(), "개인문서", "17. 네이버프리미엄콘텐츠", "네이버이미지");
 
 function sanitize(name) {
-  return name.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim().slice(0, 50) || "untitled";
+  return name.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").slice(0, 50).trim() || "untitled";
 }
 
 // Pexels URL에 JPG 강제
