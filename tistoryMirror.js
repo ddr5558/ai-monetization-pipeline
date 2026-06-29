@@ -6,6 +6,7 @@ const path = require("path");
 const { postToTistory } = require("./tistory");
 const { sendAlert } = require("./alert");
 const { generateShorts, shortsExists } = require("./shorts");
+const { downloadNaverImages } = require("./naverImages");
 
 const WP_SITE = "cheetahfather.wordpress.com";
 const MIRRORED_FILE = path.resolve("./mirrored.json");
@@ -86,7 +87,8 @@ async function main() {
   // 쇼츠 대본 보완 단계 — 미러링된 글 중 대본이 없는 것을 생성한다.
   // (방금 미러링한 글 + 이전에 일시 오류로 빠진 글까지 매번 재시도되어 누락 방지)
   for (const p of posts) {
-    if (mirrored.includes(p.post_id) && !shortsExists(p.post_id)) {
+    if (!mirrored.includes(p.post_id)) continue;
+    if (!shortsExists(p.post_id)) {
       console.log(`\n[쇼츠 대본] ${p.post_title}`);
       await generateShorts({
         id: p.post_id,
@@ -95,6 +97,12 @@ async function main() {
         url: p.post_link,
       });
     }
+    // 네이버용 이미지 다운로드 (이미 받았으면 내부에서 건너뜀)
+    await downloadNaverImages({
+      id: p.post_id,
+      title: p.post_title,
+      contentHtml: p.post_content,
+    });
   }
 
   console.log("\n미러링 작업 종료.");
